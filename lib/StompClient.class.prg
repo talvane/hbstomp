@@ -150,18 +150,18 @@ METHOD subscribe( cDestination, cAck ) CLASS TStompClient
     cFrameBuffer := ::oSocket:cReceivedData
 
     DO WHILE ( Len( cFrameBuffer ) > 0 )
-      OutStd( "Frame N: ", STR( ++i ),  hb_EOL() )
+      ConOut( "Frame N: " + STR( ++i ) + CRLF )
 
       oStompFrame := oStompFrame:parse( @cFrameBuffer )
 
       IF ( !oStompFrame:isValid() )
         FOR i := 1 TO oStompFrame:countErrors()
-          OutStd( "ERRO: ", oStompFrame:aErrors[i] )
+          ConOut( "ERRO: " + oStompFrame:aErrors[i] )
         NEXT
       ENDIF
 
       IF ( oStompFrame:cCommand == STOMP_SERVER_COMMAND_MESSAGE )
-        OutStd( "Frame Dump", hb_EOL(), oStompFrame:build() , hb_EOL() )
+        ConOut( "Frame Dump" + CRLF + oStompFrame:build() + CRLF )
       ELSE
         IF ( oStompFrame:cCommand == STOMP_SERVER_COMMAND_ERROR )
           ::cErrorMessage := oStompFrame:cMessage
