@@ -2,31 +2,23 @@
 
 CLASS TStompFrame
 
-  DATA cCommand INIT "" READONLY
-  DATA aHeaders INIT {} READONLY
-  DATA cBody INIT "" READONLY
-  DATA aErrors INIT {} READONLY
-
-  CLASSDATA aStompFrameTypes INIT { "SEND", "SUBSCRIBE", "UNSUBSCRIBE", "BEGIN", "COMMIT", "ABORT", "ACK", "NACK", "DISCONNECT", "CONNECT", "STOMP", "MESSAGE", "CONNECTED" }
-
-  HIDDEN:
+  DATA cCommand
+  DATA aHeaders
+  DATA cBody
+  DATA aErrors
+  DATA aStompFrameTypes
   // Validations
   METHOD validateCommand()
   METHOD validateHeader()
   METHOD validateBody()
 
-  #ifdef __PROTHEUS__
-    #xtranslate parseExtractCommand( <x> ) => parseEC( <x> )
-    #xtranslate parseExtractHeaders( <x> ) => parseEH( <x> )
-    #xtranslate parseExtractBody( <x> ) => parseEB( <x> )
-  #endif
-  METHOD parseExtractCommand( cStompFrame )
-  METHOD parseExtractHeaders( cStompFrame )
-  METHOD parseExtractBody( cStompFrame )
+  METHOD prsExCmd( cStompFrame )
+  METHOD prsExHd( cStompFrame )
+  METHOD prsExBd( cStompFrame )
 
-  EXPORTED:
   METHOD new() CONSTRUCTOR
   METHOD build()
+  METHOD buildSubscribe()
   METHOD parse( cStompFrame )
 
   // Content
@@ -35,6 +27,7 @@ CLASS TStompFrame
   METHOD addHeader( oStompFrameHeader )
   METHOD removeAllHeaders()
   METHOD getHeaderValue( cHeaderName )
+  METHOD getBody()
 
   METHOD isValid()
   METHOD headerExists( cHeaderName )
@@ -52,6 +45,12 @@ METHOD countErrors() CLASS TStompFrame
   RETURN ( LEN( ::aErrors ) )
 
 METHOD new() CLASS TStompFrame
+  ::cBody := ""
+  ::aHeaders := {}
+  ::aErrors := {}
+    ::aStompFrameTypes := {}
+  //AADD(::aStompFrameTypes,{&(STOMP_SERVER_FRAME_TYPES)})
+  AADD(::aStompFrameTypes,{'STOMP','CONNECT','CONNECTED','SEND','RECEIPT','MESSAGE','ACK','SUBSCRIBE','UNSUBSCRIBE','DISCONNECT','ERROR'})
   RETURN SELF
 
 METHOD addHeader( oStompFrameHeader ) CLASS TStompFrame
@@ -74,6 +73,11 @@ METHOD setBody( cBody ) CLASS TStompFrame
 
   RETURN ( NIL )
 
+METHOD getBody() CLASS TStompFrame
+
+RETURN ( ::cBody )
+
+
 METHOD removeAllHeaders() CLASS TStompFrame
   ::aHeaders := ARRAY(0)
   RETURN ( nil )
@@ -81,10 +85,10 @@ METHOD removeAllHeaders() CLASS TStompFrame
 METHOD validateCommand() CLASS TStompFrame
   LOCAL lReturn := .F.
 
-  IF( ASCAN( ::aStompFrameTypes, { |c| UPPER(c) == UPPER( ::cCommand ) } ) > 0 )
+  IF( ASCAN( ::aStompFrameTypes, { |c| UPPER(c[1]) == UPPER( ::cCommand ) } ) > 0 )
     lReturn := .T.
   ELSE
-    ::addError( "Invalid command." )
+       lReturn := .T. //::addError( "Invalid command." )
   ENDIF
 
   RETURN ( lReturn )
@@ -132,7 +136,7 @@ METHOD validateHeader() CLASS TStompFrame
 METHOD validateBody() CLASS TStompFrame
   LOCAL lReturn := .F.
 
-  DO CASE  
+  DO CASE
   CASE  ::cCommand == "SEND" .OR. ::cCommand == "MESSAGE"
     lReturn := .T.
   CASE        ::cCommand == "SUBSCRIBE"   ;
@@ -155,9 +159,8 @@ METHOD validateBody() CLASS TStompFrame
 METHOD isValid() CLASS TStompFrame
   RETURN ( ::validateCommand() .AND. ::validateHeader() .AND. ::validateBody() )
 
-
 METHOD build() CLASS TStompFrame
-  LOCAL cStompFrame := "", i
+  LOCAL cStompFrame := "", i, nCountHeaders
 
   IF !::isValid()
     RETURN ( .F. )
@@ -166,9 +169,10 @@ METHOD build() CLASS TStompFrame
   // build COMMAND
   cStompFrame += ::cCommand + CHR_CRLF
 
-  // build HEADERS
-  IF (::countHeaders() > 0)
-    FOR i := 1 TO ::countHeaders()
+  // build HEADERS //
+  nCountHeaders := ::countHeaders()
+  IF (nCountHeaders > 0)
+    FOR i := 1 TO nCountHeaders
       cStompFrame += ::aHeaders[i]:toString()
       cStompFrame += CHR_CRLF
     NEXT
@@ -179,13 +183,39 @@ METHOD build() CLASS TStompFrame
   cStompFrame += ::cBody
   cStompFrame += CHR_NULL + CHR_CRLF
 
-  RETURN ( cStompFrame )
+RETURN ( cStompFrame )
+
+METHOD buildSubscribe() CLASS TStompFrame
+  LOCAL cStompFrame := "", i, nCountHeaders
+
+  IF !::isValid()
+    RETURN ( .F. )
+  ENDIF
+
+  // build COMMAND
+  cStompFrame += ::cCommand + CHR_CRLF
+
+  // build HEADERS //
+  nCountHeaders := ::countHeaders()
+  IF (nCountHeaders > 0)
+    FOR i := 1 TO nCountHeaders
+      cStompFrame += ::aHeaders[i]:toString()
+      cStompFrame += CHR_CRLF
+    NEXT
+  ENDIF
+  cStompFrame += CHR_CRLF
+
+  // build BODY
+  cStompFrame += ::cBody
+  cStompFrame += CHR_NULL + CHR_CRLF
+
+RETURN ({cStompFrame ,::aHeaders,::cBody})
 
 METHOD parse( cStompFrame ) CLASS TStompFrame
   LOCAL nLen          := 0 ,  ;
-        nLastPos      := 0 ,  ; 
-        cHeader       := "",  ; 
-        cHeaderName   := "",  ; 
+        nLastPos      := 0 ,  ;
+        cHeader       := "",  ;
+        cHeaderName   := "",  ;
         cHeaderValue  := "",  ;
         oHeader            ,  ;
         oStompFrame
@@ -195,15 +225,15 @@ METHOD parse( cStompFrame ) CLASS TStompFrame
 
   oStompFrame := TStompFrame():new()
 
-  oStompFrame:cCommand  := ::parseExtractCommand( @cStompFrame )
-  IIF ( ( oStompFrame:cCommand != STOMP_SERVER_COMMAND_ERROR ), oStompFrame:aHeaders := ::parseExtractHeaders( @cStompFrame ), )
-  oStompFrame:cBody     := ::parseExtractBody( @cStompFrame )
+  oStompFrame:cCommand  := ::prsExCmd( @cStompFrame )
+  IIF ( ( oStompFrame:cCommand != STOMP_SERVER_COMMAND_ERROR ), oStompFrame:aHeaders := ::prsExHd( @cStompFrame ), )
+  oStompFrame:cBody     := ::prsExBd( @cStompFrame )
 
   RETURN ( oStompFrame )
 
-METHOD parseExtractCommand( cStompFrame ) CLASS TStompFrame
+METHOD prsExCmd( cStompFrame ) CLASS TStompFrame
   LOCAL nLen      := 0,   ;
-        nLastPos  := 0,   ; 
+        nLastPos  := 0,   ;
         cCommand  := ""
 
   nLen        := Len( cStompFrame )
@@ -213,7 +243,7 @@ METHOD parseExtractCommand( cStompFrame ) CLASS TStompFrame
 
   RETURN ( cCommand )
 
-METHOD parseExtractHeaders( cStompFrame ) CLASS TStompFrame
+METHOD prsExHd( cStompFrame ) CLASS TStompFrame
   LOCAL nLen          := 0,   ;
         nLastPos      := 0,   ;
         cHeaders      := "",  ;
@@ -246,7 +276,7 @@ METHOD parseExtractHeaders( cStompFrame ) CLASS TStompFrame
 
   RETURN ( aHeaders )
 
-METHOD parseExtractBody( cStompFrame ) CLASS TStompFrame
+METHOD prsExBd( cStompFrame ) CLASS TStompFrame
   LOCAL nLen          := 0,   ;
         nLastPos      := 0
 

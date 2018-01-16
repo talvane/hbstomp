@@ -16,7 +16,7 @@
 	#DEFINE TRY_SET_BELL			6
 
 	#DEFINE TRY_ELEMENTS			6
-	
+
 	#XTRANSLATE	TRY EXCEPTION	=> TRYEXCEPTION
 	#XTRANSLATE	CATCH EXCEPTION	=> CATCHEXCEPTION
 	#XTRANSLATE	END TRY			=> ENDEXCEPTION
@@ -25,7 +25,7 @@
 
 	#IFNDEF _SET_BELL
 		#DEFINE _SET_BELL         26
-	#ENDIF	
+	#ENDIF
 
 	#XCOMMAND TRYEXCEPTION  	=> ;
 		IF( !( Type( "aTryException" ) == "A" ) .or. !( Type( "nTryException" ) == "N" ) , PutTryExceptionVars() , NIL ) ;;
@@ -38,7 +38,7 @@
 		ErrorBlock( \{ \|oError\| aTryException\[nTryException\]\[TRY_OBJERROR\] := oError , BREAK( @oError ) \} ) ;;
 		SysErrorBlock( \{ \|oError\| aTryException\[nTryException\]\[TRY_OBJERROR\] := oError , BREAK( @oError ) \} ) ;;
 		BEGIN SEQUENCE ;;
-	
+
 	#XCOMMAND TRYEXCEPTION USING <bError> [PARAMETERS <aParameters>] => ;
 		IF( !( Type( "aTryException" ) == "A" ) .or. !( Type( "nTryException" ) == "N" ) , PutTryExceptionVars() , NIL ) ;;
 		aAdd( aTryException , Array( TRY_ELEMENTS ) ) ;;
@@ -52,14 +52,14 @@
 		BEGIN SEQUENCE ;;
 
 	#XCOMMAND CATCHEXCEPTION	=>  ;
-			aTryException\[nTryException\]\[TRY_ERROR_MESSAGE\] := CaptureError( .T. , @nTryException , @nTryException , 1 ) ;; 
+			aTryException\[nTryException\]\[TRY_ERROR_MESSAGE\] := CaptureError( .T. , @nTryException , @nTryException , 1 ) ;;
 			RECOVER ;;
-	
+
 	#XCOMMAND CATCHEXCEPTION USING <oException> => ;
 		RECOVER ;;
-		aTryException\[nTryException\]\[TRY_ERROR_MESSAGE\] := CaptureError( .T. , @nTryException , @nTryException , 1 ) ;; 
+		aTryException\[nTryException\]\[TRY_ERROR_MESSAGE\] := CaptureError( .T. , @nTryException , @nTryException , 1 ) ;;
 		<oException>	:= aTryException\[nTryException\]\[TRY_OBJERROR\] ;;
-	
+
 	#XCOMMAND ENDEXCEPTION		=> ;
 		END SEQUENCE ;;
 		IF ( ( Type( "aTryException" ) == "A" ) .and. ( Type( "nTryException" ) == "N" ) ) ;;
@@ -72,8 +72,8 @@
 			IF ( ValType(aTryException\[nTryException\]\[TRY_SET_BELL\]) == "L" ) ;;
 				IF ( aTryException\[nTryException\]\[TRY_SET_BELL\]) ;;
 					Set(_SET_BELL,"ON") ;;
-				EndIF ;;	
-			ENDIF ;;			
+				EndIF ;;
+			ENDIF ;;
 			aDel( aTryException , nTryException ) ;;
 			aSize( aTryException , --nTryException ) ;;
 		ENDIF ;;
@@ -90,7 +90,7 @@
 			IF ( ValType(aTryException\[nTryException\]\[TRY_SET_BELL\]) == "L" ) ;;
 				IF ( aTryException\[nTryException\]\[TRY_SET_BELL\]) ;;
 					Set(_SET_BELL,"ON") ;;
-				EndIF ;;	
+				EndIF ;;
 			ENDIF ;;
 			--nTryException ;;
 		ENDIF ;;
@@ -99,7 +99,7 @@
 		Public aTryException	:= {}
 		Public nTryException	:= 0
 	Return( NIL )
-	
+
 	Static Function CaptureError( lObjError , nStart , nFinish , nStep )
 		Local cError		:= ''
 		Local lTryException	:= ( ( Type( 'aTryException' ) == 'A' ) .and. ( Type( 'nTryException' ) == 'N' ) )
@@ -120,7 +120,7 @@
 					IF ( ValType( aTryException[nError][TRY_ERROR_MESSAGE] ) == 'C' )
 						cError += aTryException[nError][TRY_ERROR_MESSAGE]
 					EndIF
-				EndIF	
+				EndIF
 			Next nError
 		EndIF
 	Return( cError )

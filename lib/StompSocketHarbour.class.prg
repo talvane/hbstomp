@@ -1,22 +1,30 @@
-#include "stomp.ch"
-#include "hbsocket.ch"
-
 #ifdef __HARBOUR__
+#include "stomp.ch"
 
-CLASS TStompSocketHarbour FROM TStompSocket
+CLASS TStompSocket
+
+  DATA hSocket
+  DATA nStatus
+  DATA lConnected
+  DATA oError
+  DATA cBuffer
+  DATA cReceivedData
+  DATA cHost
+  DATA nPort
 
   METHOD new() CONSTRUCTOR
   METHOD connect( cHost, nPort )
   METHOD send( cStompFrame )
   METHOD receive()
   METHOD disconnect()
+  METHOD isConnected()
 
 ENDCLASS
 
-METHOD new()
+METHOD new() CLASS TStompSocket
   RETURN ( self )
 
-METHOD connect( cHost, nPort ) CLASS TStompSocketHarbour
+METHOD connect( cHost, nPort ) CLASS TStompSocket
 
   IF EMPTY( ::hSocket := hb_socketOpen() )
     ::oError := ErrorNew( "ESocketOpen",,, ProcName(), "Socket create error " + hb_ntos( hb_socketGetError() ) )
@@ -30,23 +38,7 @@ METHOD connect( cHost, nPort ) CLASS TStompSocketHarbour
 
   RETURN( NIL )
 
-METHOD receive() CLASS TStompSocketHarbour
-  LOCAL cBuffer, nLen
-
-  ::cReceivedData := ""
-  cBuffer = Space( STOMP_SOCKET_BUFFER_SIZE )
-  IF ( nLen := hb_socketRecv( ::hSocket, @cBuffer, STOMP_SOCKET_BUFFER_SIZE, 0 , 1000 ) ) > 0
-    ::cReceivedData := ALLTRIM( cBuffer )
-  ENDIF
-
-  #ifdef DEBUG
-  OutStd( "<<<", hb_EOL() )
-  OutStd( ALLTRIM( cBuffer ), hb_EOL() )
-  #endif
-
-  RETURN ( nLen )
-
-METHOD send( cStompFrame ) CLASS TStompSocketHarbour
+METHOD send( cStompFrame ) CLASS TStompSocket
 
   hb_socketSend( ::hSocket, ALLTRIM( cStompFrame ) )
 
@@ -57,8 +49,26 @@ METHOD send( cStompFrame ) CLASS TStompSocketHarbour
 
  RETURN ( NIL )
 
-METHOD disconnect() CLASS TStompSocketHarbour
+METHOD receive() CLASS TStompSocket
+  LOCAL cBuffer := Space( STOMP_SOCKET_BUFFER_SIZE )
+  LOCAL nLen := 0
 
+  ::cReceivedData := ""
+  nLen := hb_socketRecv( ::hSocket, @cBuffer, STOMP_SOCKET_BUFFER_SIZE, 0 , 10000 )
+  IF ( nLen > 0 )
+    ::cReceivedData := ALLTRIM( cBuffer )
+  ENDIF
+
+  #ifdef DEBUG
+  OutStd( "<<<", hb_EOL() )
+  OutStd( ALLTRIM( cBuffer ), hb_EOL() )
+  #endif
+
+  RETURN ( nLen )
+
+METHOD disconnect() CLASS TStompSocket
+
+  ::lConnected := .F.
   hb_socketShutdown( ::hSocket )
   hb_socketClose( ::hSocket )
 
@@ -66,4 +76,7 @@ METHOD disconnect() CLASS TStompSocketHarbour
 
   RETURN ( NIL )
 
-#endif
+METHOD isConnected() CLASS TStomSocket
+RETURN ( ::lConnected )
+
+#endif //__HARBOUR__
