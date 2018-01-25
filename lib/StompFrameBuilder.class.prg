@@ -2,12 +2,16 @@
 
 CLASS TStompFrameBuilder
 
+  METHOD new() CONSTRUCTOR
   METHOD buildConnectFrame( cHost, cLogin, cPassCode )
   METHOD buildSendFrame( cDestination, cMessage )
   METHOD buildSubscribeFrame( cDestination )
   METHOD buildDisconnectFrame( cReceipt )
 
 ENDCLASS
+
+METHOD new() CLASS TStompFrameBuilder
+  RETURN ( SELF )
 
 //TODO - implement build of heart-beat header for CONNECT frame
 METHOD buildConnectFrame( cHost, cLogin, cPassCode ) CLASS TStompFrameBuilder
