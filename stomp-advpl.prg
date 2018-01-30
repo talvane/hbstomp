@@ -4,24 +4,23 @@ USER FUNCTION HBSTOMP()
 
   LOCAL oStompClient
 
-  oStompClient := TStompClient():new("172.20.0.2", 61613)
-  ConOut("Instanciou" + CRLF)
+  oStompClient := TStompClient():new("192.168.1.33", 61613, "logstash", "logstash", "/", .T.)
+  ? "Instanciou", CHR_CRLF
   oStompClient:connect()
-  ConOut("Solicitou conexao" + CRLF)
+  ? "Solicitou conexao", CHR_CRLF
 
   IF oStompClient:isConnected()
-  	ConOut("CONECTOU" + CRLF)
-    oStompClient:publish( "/queue/hbstomp", "First  message." )
-    ConOut("PUBLICOU" + CRLF)
-    oStompClient:subscribeTo( "/queue/hbstomp" )
-    ConOut("SUBSCREVEU" + CRLF)
+    ? "CONECTOU", CHR_CRLF
+    oStompClient:publish( "/queue/hbstomp", "Mensagem do ADVPL" )
+    ? "PUBLICOU", CHR_CRLF
+    oStompClient:subscribe( "/queue/hbstomp",  )
+    ? "SUBSCREVEU", CHR_CRLF
   ELSE
-    ConOut( "Failed to connect." + CRLF )
-    ConOut( "Message: " + oStompClient:getErrorMessage() + CRLF )
+    ? "Failed to connect.", CHR_CRLF
+    ? "Message: ", oStompClient:getErrorMessage(), CHR_CRLF
   ENDIF
 
   oStompClient:disconnect()
-  ConOut("DISCONECTOU" + CRLF)
-
+  ? "DESCONECTOU", CHR_CRLF
 
   RETURN ( NIL )
