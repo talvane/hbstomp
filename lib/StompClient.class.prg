@@ -39,6 +39,9 @@ CLASS TStompClient
   DATA cLastReceipt
   DATA cLastMessage
   DATA oStompFrameBuilder
+  DATA aSubscriptions
+
+  METHOD _registerSubscription( cSubscriptionId )
 
 ENDCLASS
 
@@ -48,6 +51,7 @@ METHOD new( cHost, nPort, cLogin, cPassword , cDestination, lSendReceipt ) CLASS
   ::cHost := cHost
   ::nPort := nPort
   ::cDestination := cDestination
+  ::aSubscriptions := {}
 
   IIF( ValType(lSendReceipt) != 'U', ::lSendReceipt := lSendReceipt, ::lSendReceipt := .F. )
 
@@ -78,8 +82,7 @@ METHOD connect() CLASS TStompClient
 
     ::oSocket:send( oStompFrame:build() )
 
-    IF ( ( ::oSocket:receive() > 0 ) )
-      cFrameBuffer := ::oSocket:cReceivedData
+    IF ( ( ::oSocket:receive( @cFrameBuffer ) > 0 ) )
       oStompFrame := oStompFrame:parse( cFrameBuffer )
 
       IF ( oStompFrame:cCommand == STOMP_SERVER_COMMAND_CONNECTED )
@@ -156,6 +159,8 @@ METHOD subscribe( cDestination, cAck ) CLASS TStompClient
   oStompFrame := ::oStompFrameBuilder:buildSubscribeFrame( cDestination )
   IIF( ValType( cAck ) == 'C', oStompFrame:addHeader( TStompFrameHeader():new( STOMP_ACK_HEADER, cAck ) ), )
 
+  ::_registerSubscription( oStompFrame:getHeaderValue ( STOMP_ID_HEADER ) )
+
   ::oSocket:send( oStompFrame:build() )
 
   //FIXME : split received data in individual StompFrames
@@ -196,3 +201,7 @@ METHOD readFrame() CLASS TStompClient
   LOCAL oStompFrame
 
   RETURN ( oStompFrame )
+
+METHOD _registerSubscription( cSubscriptionId ) CLASS TStompClient
+  AADD( ::aSubscriptions, cSubscriptionId )
+  RETURN ( NIL )
